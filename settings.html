@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>背景设置</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #f0f0f0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .window-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(20px);
+            border-radius: 32px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            clip-path: inset(0 round 32px);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .title-bar {
+            height: 48px;
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            -webkit-app-region: drag;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .title-bar span {
+            -webkit-app-region: no-drag;
+            font-size: 16px;
+            font-weight: 500;
+            color: #ffffff;
+        }
+
+        .title-bar button {
+            -webkit-app-region: no-drag;
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            line-height: 1;
+        }
+
+        .title-bar button:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .form-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            -webkit-app-region: no-drag;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 500;
+            margin: 20px 0 10px 0;
+            color: #ffffff;
+            border-left: 3px solid #ffffff;
+            padding-left: 10px;
+        }
+
+        .setting-item {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 13px;
+            color: #ccc;
+        }
+
+        input[type="color"] {
+            width: 60px;
+            height: 36px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            padding: 0;
+            border-radius: 6px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            background: transparent;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-runnable-track {
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #ffffff;
+            margin-top: -6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+            cursor: pointer;
+        }
+
+        .value {
+            display: inline-block;
+            margin-left: 8px;
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            outline: none;
+            cursor: pointer;
+        }
+        select option {
+            background: #333;
+        }
+
+        button {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 24px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 20px;
+            transition: background 0.2s;
+            width: 100%;
+        }
+
+        button:hover {
+            background: rgba(255,255,255,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="window-bg"></div>
+    <div class="content">
+        <div class="title-bar">
+            <span>⚙️ 设置</span>
+            <button class="close-btn" onclick="window.close()">✕</button>
+        </div>
+
+        <div class="form-container">
+            <!-- AI 模型选择 -->
+            <div class="section-title">AI 模型</div>
+            <div class="setting-item">
+                <label>选择模型</label>
+                <select id="aiModelSelect">
+                    <option value="qwen-turbo">qwen-turbo (最快)</option>
+                    <option value="qwen3.5-flash">Qwen3.5-Flash (平衡)</option>
+                    <option value="qwen-plus">qwen-plus (能力均衡)</option>
+                    <option value="qwen-max">qwen-max (最强)</option>
+                </select>
+            </div>
+
+            <!-- 主窗口设置 -->
+            <div class="section-title">主窗口</div>
+            <div class="setting-item">
+                <label>起始颜色</label>
+                <input type="color" id="mainStartColor" value="#a8ede0">
+            </div>
+            <div class="setting-item">
+                <label>结束颜色</label>
+                <input type="color" id="mainEndColor" value="#fed6e3">
+            </div>
+            <div class="setting-item">
+                <label>角度 <span id="mainAngleValue" class="value">145°</span></label>
+                <input type="range" id="mainAngle" min="0" max="360" value="145" step="1">
+            </div>
+            <div class="setting-item">
+                <label>透明度 <span id="mainAlphaValue" class="value">0.5</span></label>
+                <input type="range" id="mainAlpha" min="0" max="1" step="0.05" value="0.5">
+            </div>
+            <div class="setting-item">
+                <label>文字颜色</label>
+                <input type="color" id="mainTextColor" value="#ffffff">
+            </div>
+            <div class="setting-item">
+                <label>字体大小 <span id="mainFontSizeValue" class="value">16px</span></label>
+                <input type="range" id="mainFontSize" min="12" max="24" value="16" step="1">
+            </div>
+
+            <!-- 日历窗口设置 -->
+            <div class="section-title">日历窗口</div>
+            <div class="setting-item">
+                <label>起始颜色</label>
+                <input type="color" id="calStartColor" value="#a8ede0">
+            </div>
+            <div class="setting-item">
+                <label>结束颜色</label>
+                <input type="color" id="calEndColor" value="#fed6e3">
+            </div>
+            <div class="setting-item">
+                <label>角度 <span id="calAngleValue" class="value">145°</span></label>
+                <input type="range" id="calAngle" min="0" max="360" value="145" step="1">
+            </div>
+            <div class="setting-item">
+                <label>透明度 <span id="calAlphaValue" class="value">0.5</span></label>
+                <input type="range" id="calAlpha" min="0" max="1" step="0.05" value="0.5">
+            </div>
+            <div class="setting-item">
+                <label>文字颜色</label>
+                <input type="color" id="calTextColor" value="#ffffff">
+            </div>
+            <div class="setting-item">
+                <label>字体大小 <span id="calFontSizeValue" class="value">16px</span></label>
+                <input type="range" id="calFontSize" min="12" max="24" value="16" step="1">
+            </div>
+
+            <button id="saveBtn">保存设置</button>
+        </div>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+
+        // 获取控件
+        const aiModelSelect = document.getElementById('aiModelSelect');
+        const mainStartColor = document.getElementById('mainStartColor');
+        const mainEndColor = document.getElementById('mainEndColor');
+        const mainAngle = document.getElementById('mainAngle');
+        const mainAngleValue = document.getElementById('mainAngleValue');
+        const mainAlpha = document.getElementById('mainAlpha');
+        const mainAlphaValue = document.getElementById('mainAlphaValue');
+        const mainTextColor = document.getElementById('mainTextColor');
+        const mainFontSize = document.getElementById('mainFontSize');
+        const mainFontSizeValue = document.getElementById('mainFontSizeValue');
+
+        const calStartColor = document.getElementById('calStartColor');
+        const calEndColor = document.getElementById('calEndColor');
+        const calAngle = document.getElementById('calAngle');
+        const calAngleValue = document.getElementById('calAngleValue');
+        const calAlpha = document.getElementById('calAlpha');
+        const calAlphaValue = document.getElementById('calAlphaValue');
+        const calTextColor = document.getElementById('calTextColor');
+        const calFontSize = document.getElementById('calFontSize');
+        const calFontSizeValue = document.getElementById('calFontSizeValue');
+
+        const saveBtn = document.getElementById('saveBtn');
+
+        function updateMainDisplay() {
+            mainAngleValue.textContent = mainAngle.value + '°';
+            mainAlphaValue.textContent = parseFloat(mainAlpha.value).toFixed(2);
+            mainFontSizeValue.textContent = mainFontSize.value + 'px';
+        }
+        function updateCalDisplay() {
+            calAngleValue.textContent = calAngle.value + '°';
+            calAlphaValue.textContent = parseFloat(calAlpha.value).toFixed(2);
+            calFontSizeValue.textContent = calFontSize.value + 'px';
+        }
+
+        mainAngle.addEventListener('input', updateMainDisplay);
+        mainAlpha.addEventListener('input', updateMainDisplay);
+        mainFontSize.addEventListener('input', updateMainDisplay);
+        calAngle.addEventListener('input', updateCalDisplay);
+        calAlpha.addEventListener('input', updateCalDisplay);
+        calFontSize.addEventListener('input', updateCalDisplay);
+
+        async function loadSettings() {
+            try {
+                const settings = await ipcRenderer.invoke('load-settings');
+                // AI 模型
+                aiModelSelect.value = settings.aiModel || 'qwen-turbo';
+                // 主窗口
+                mainStartColor.value = settings.main.startColor;
+                mainEndColor.value = settings.main.endColor;
+                mainAngle.value = settings.main.angle;
+                mainAlpha.value = settings.main.alpha;
+                mainTextColor.value = settings.main.textColor;
+                mainFontSize.value = settings.main.fontSize;
+                // 日历窗口
+                calStartColor.value = settings.calendar.startColor;
+                calEndColor.value = settings.calendar.endColor;
+                calAngle.value = settings.calendar.angle;
+                calAlpha.value = settings.calendar.alpha;
+                calTextColor.value = settings.calendar.textColor;
+                calFontSize.value = settings.calendar.fontSize;
+
+                updateMainDisplay();
+                updateCalDisplay();
+            } catch (e) {
+                console.error('加载设置失败', e);
+            }
+        }
+
+        saveBtn.addEventListener('click', async () => {
+            const settings = {
+                aiModel: aiModelSelect.value, // 保存选择的模型
+                main: {
+                    startColor: mainStartColor.value,
+                    endColor: mainEndColor.value,
+                    angle: parseInt(mainAngle.value, 10),
+                    alpha: parseFloat(mainAlpha.value),
+                    textColor: mainTextColor.value,
+                    fontSize: parseInt(mainFontSize.value, 10)
+                },
+                calendar: {
+                    startColor: calStartColor.value,
+                    endColor: calEndColor.value,
+                    angle: parseInt(calAngle.value, 10),
+                    alpha: parseFloat(calAlpha.value),
+                    textColor: calTextColor.value,
+                    fontSize: parseInt(calFontSize.value, 10)
+                }
+            };
+            try {
+                await ipcRenderer.invoke('save-settings', settings);
+                await ipcRenderer.invoke('update-main-bg', settings.main);
+                await ipcRenderer.invoke('update-calendar-bg', settings.calendar);
+                // 不关闭窗口
+            } catch (e) {
+                console.error('保存设置失败', e);
+            }
+        });
+
+        loadSettings();
+    </script>
+</body>
+</html>

@@ -1,0 +1,1623 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>完整日历</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        :root {
+            --text-color: #ffffff;
+            --font-size-base: 16px;
+        }
+
+        body {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text-color);
+            position: relative;
+            overflow: hidden;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .window-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                var(--gradient-angle, 145deg),
+                var(--gradient-start, rgba(168, 237, 224, 0.5)),
+                var(--gradient-end, rgba(254, 214, 227, 0.5))
+            );
+            backdrop-filter: blur(20px);
+            border-radius: 32px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            clip-path: inset(0 round 32px);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .title-bar {
+            height: 35px;
+            padding: 0 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            -webkit-app-region: drag;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .left-section, .center-section, .right-section {
+            display: flex;
+            align-items: center;
+            height: 100%;
+        }
+
+        .left-section {
+            flex: 1;
+            justify-content: flex-start;
+        }
+
+        .center-section {
+            flex: 0 0 auto;
+            justify-content: center;
+            position: relative;
+        }
+
+        .right-section {
+            flex: 1;
+            justify-content: flex-end;
+        }
+
+        .date-navigation {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            -webkit-app-region: no-drag;
+        }
+
+        .year-month-container {
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+
+        .year-box, .month-box {
+            position: relative;
+            width: 40px;
+            height: 24px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .year-box {
+            border-radius: 12px 0 0 12px;
+            border-right: none;
+        }
+
+        .month-box {
+            border-radius: 0 12px 12px 0;
+        }
+
+        .display-text {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        .edit-input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.5);
+            color: white;
+            font-size: 12px;
+            text-align: center;
+            outline: none;
+            border-radius: inherit;
+            display: none;
+        }
+
+        .grid-panel {
+            position: absolute;
+            top: 28px;
+            left: 0;
+            width: 260px;
+            background: rgba(28,28,30,0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.2);
+            z-index: 100;
+            display: none;
+            padding: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            transform-origin: top center;
+            animation: panelAppear 0.2s ease-out;
+        }
+
+        @keyframes panelAppear {
+            0% { opacity: 0; transform: scaleY(0.8); }
+            100% { opacity: 1; transform: scaleY(1); }
+        }
+
+        .month-year-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding: 0 4px;
+        }
+
+        .month-year-nav button {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #fff;
+            font-size: 16px;
+            width: 28px;
+            height: 28px;
+            border-radius: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .month-year-nav button:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .month-year-nav .current-year {
+            font-size: 16px;
+            font-weight: 500;
+            color: #fff;
+            cursor: pointer;
+            padding: 4px 12px;
+            border-radius: 16px;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .month-year-nav .current-year:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
+        .grid-item {
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 8px 0;
+            text-align: center;
+            font-size: 14px;
+            color: #fff;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .grid-item:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 4px;
+        }
+
+        .nav-buttons button {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: var(--text-color);
+            font-size: 14px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 12px;
+            transition: background 0.2s;
+        }
+
+        .nav-buttons button:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .ai-button {
+            background: linear-gradient(145deg, #a8ede0, #fed6e3);
+            border: none;
+            color: #333;
+            font-size: 14px;
+            font-weight: bold;
+            padding: 4px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            -webkit-app-region: no-drag;
+            margin: 0 4px;
+        }
+        .ai-button:hover {
+            opacity: 0.8;
+        }
+        .ai-button.normal {
+            background: white;
+            color: #333;
+        }
+
+        .sub-buttons {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            gap: 8px;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
+            border-radius: 20px;
+            padding: 6px 12px;
+            z-index: 10;
+            border: 1px solid rgba(255,255,255,0.2);
+            margin-bottom: 8px;
+        }
+        .sub-button {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .sub-button:hover {
+            background: rgba(255,255,255,0.4);
+        }
+
+        .right-buttons {
+            display: flex;
+            gap: 4px;
+            -webkit-app-region: no-drag;
+        }
+
+        .right-buttons button {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 16px;
+            cursor: pointer;
+            padding: 0 4px;
+            border-radius: 4px;
+        }
+
+        .right-buttons button:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            padding: 24px;
+            gap: 24px;
+            min-height: 0;
+        }
+
+        .calendar-container {
+            flex: 1.5;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-size: var(--font-size-base);
+            color: var(--text-color);
+            opacity: 0.8;
+            margin-bottom: 10px;
+        }
+
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            grid-auto-rows: 1fr;
+            gap: 6px;
+            flex: 1;
+        }
+
+        .day-cell {
+            background: transparent;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            cursor: pointer;
+            min-height: 0;
+            padding: 1px 0;
+            border-radius: 4px;
+            transition: color 0.2s;
+        }
+
+        .day-cell:hover {
+            color: #fff;
+            text-shadow: 0 0 5px rgba(255,255,255,0.5);
+        }
+
+        .day-cell.today {
+            background: #007acc !important;
+            box-shadow: 0 0 8px rgba(0,122,204,0.5);
+            color: #fff;
+        }
+
+        .day-cell.selected {
+            outline: 2px solid #fff;
+            outline-offset: 2px;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .day-cell.other-month {
+            opacity: 0.4;
+        }
+
+        .solar {
+            font-size: calc(var(--font-size-base) * 0.9);
+            font-weight: 500;
+            color: inherit;
+            line-height: 1.2;
+        }
+
+        .lunar {
+            font-size: calc(var(--font-size-base) * 0.6);
+            color: inherit;
+            opacity: 0.7;
+            margin-top: 2px;
+            line-height: 1.2;
+        }
+
+        .lunar.festival {
+            color: #007acc;
+            opacity: 1;
+            font-weight: 500;
+        }
+
+        .empty-cell {
+            background: transparent;
+            cursor: default;
+        }
+        .empty-cell:hover {
+            background: transparent;
+            color: inherit;
+        }
+
+        .info-panel {
+            flex: 1;
+            background: rgba(28,28,30,0.5);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 20px;
+            overflow-y: auto;
+            color: #fff;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 自定义滚动条 */
+        .info-panel::-webkit-scrollbar,
+        .chat-history::-webkit-scrollbar {
+            width: 6px;
+        }
+        .info-panel::-webkit-scrollbar-track,
+        .chat-history::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+        }
+        .info-panel::-webkit-scrollbar-thumb,
+        .chat-history::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+        }
+        .info-panel::-webkit-scrollbar-thumb:hover,
+        .chat-history::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .info-container {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .ai-chat-container {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .mode-indicator {
+            text-align: center;
+            font-size: 14px;
+            padding: 6px 0;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(5px);
+            border-radius: 20px;
+            margin-bottom: 10px;
+            color: #fff;
+            opacity: 0.8;
+            font-weight: 500;
+            width: fit-content;
+            margin-left: auto;
+            margin-right: auto;
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+
+        .chat-history {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 5px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message-wrapper {
+            position: relative;
+            max-width: 85%;
+            margin-bottom: 12px;
+            align-self: var(--align, flex-start);
+        }
+
+        .user-message-wrapper {
+            --align: flex-end;
+            margin-left: auto;
+        }
+
+        .assistant-message-wrapper {
+            --align: flex-start;
+            margin-right: auto;
+        }
+
+        .message {
+            padding: 10px 14px;
+            border-radius: 16px;
+            word-wrap: break-word;
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            background: var(--msg-bg);
+            color: var(--msg-color);
+            border-bottom-left-radius: var(--radius-bl);
+            border-bottom-right-radius: var(--radius-br);
+            position: relative;
+            padding-right: 55px;
+        }
+
+        .user-message {
+            --msg-bg: rgba(0,122,204,0.7);
+            --msg-color: white;
+            --radius-bl: 16px;
+            --radius-br: 4px;
+        }
+
+        .assistant-message {
+            --msg-bg: rgba(255,255,255,0.2);
+            --msg-color: #eee;
+            --radius-bl: 4px;
+            --radius-br: 16px;
+        }
+
+        .message p {
+            margin: 0 0 6px 0;
+        }
+
+        .message ul, .message ol {
+            margin-left: 20px;
+            margin-top: 4px;
+            margin-bottom: 4px;
+        }
+
+        .message li {
+            margin-bottom: 2px;
+        }
+
+        .message hr {
+            border: 0.5px solid rgba(255,255,255,0.2);
+            margin: 8px 0;
+        }
+
+        .message-actions {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            right: 8px;
+            display: flex;
+            gap: 6px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .message-wrapper:hover .message-actions {
+            opacity: 1;
+        }
+
+        .action-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 4px;
+            color: white;
+            font-size: 14px;
+            padding: 2px 6px;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+        }
+
+        .action-btn:hover {
+            background: rgba(255,255,255,0.4);
+        }
+
+        .preset-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .preset-button {
+            background: linear-gradient(145deg, #a8ede0, #fed6e3);
+            border: none;
+            color: #333;
+            font-size: 13px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 500;
+            flex: 1;
+            min-width: 80px;
+        }
+        .preset-button.normal {
+            background: white;
+            color: #333;
+        }
+        .preset-button:hover {
+            opacity: 0.8;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-top: 5px;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 8px 12px;
+            color: white;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .chat-input::placeholder {
+            color: #aaa;
+        }
+
+        .send-button {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 14px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+
+        .send-button:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .info-panel .date-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            padding-bottom: 8px;
+        }
+
+        .info-panel .info-item {
+            margin: 8px 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .info-panel .info-label {
+            color: #aaa;
+            font-size: 13px;
+            margin-right: 8px;
+        }
+
+        .info-panel .info-value {
+            font-weight: 500;
+        }
+
+        .current-weather {
+            margin: 15px 0;
+            padding: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+        }
+        .temp-big {
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .weather-text {
+            font-size: 16px;
+            color: #ccc;
+        }
+        .hourly-title {
+            font-size: 16px;
+            font-weight: 500;
+            margin: 10px 0 5px;
+        }
+        .hourly-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .hourly-table th {
+            text-align: left;
+            color: #aaa;
+            padding: 4px 0;
+        }
+        .hourly-table td {
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            font-size: 13px;
+        }
+        .simple-weather {
+            padding: 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 2;
+        }
+    </style>
+</head>
+<body>
+    <div class="window-bg"></div>
+    <div class="content">
+        <div class="title-bar">
+            <div class="left-section">
+                <div class="date-navigation">
+                    <div class="year-month-container">
+                        <div class="year-box" id="yearBox">
+                            <span class="display-text" id="yearDisplay">2026</span>
+                            <input type="number" class="edit-input" id="yearInput" min="1900" max="2100" value="2026">
+                            <div class="grid-panel" id="yearPanel">
+                                <div class="grid-container" id="yearGrid"></div>
+                            </div>
+                        </div>
+                        <div class="month-box" id="monthBox">
+                            <span class="display-text" id="monthDisplay">03</span>
+                            <input type="number" class="edit-input" id="monthInput" min="1" max="12" value="3">
+                            <div class="grid-panel" id="monthPanel">
+                                <div class="month-year-nav">
+                                    <button id="prevMonthYearBtn">&lt;</button>
+                                    <span class="current-year" id="monthPanelYear">2026</span>
+                                    <button id="nextMonthYearBtn">&gt;</button>
+                                </div>
+                                <div class="grid-container" id="monthGrid"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="nav-buttons">
+                        <button id="prevMonthBtn">&lt;</button>
+                        <button id="nextMonthBtn">&gt;</button>
+                        <button id="todayBtn">今</button>
+                    </div>
+                </div>
+            </div>
+            <div class="center-section">
+                <button class="ai-button" id="aiToggleBtn">AI</button>
+            </div>
+            <div class="right-section">
+                <div class="right-buttons">
+                    <button class="settings-btn" onclick="openSettings()">⚙️</button>
+                    <button class="close-btn" onclick="window.close()">✕</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="calendar-container">
+                <div class="weekdays">
+                    <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
+                </div>
+                <div class="days-grid" id="daysGrid"></div>
+            </div>
+            <div class="info-panel" id="infoPanel">
+                <div class="info-container" id="infoContainer">
+                    <div class="date-title" id="infoDateTitle">2026-03-07 周六</div>
+                    <div class="info-item">
+                        <span class="info-label">农历/干支</span>
+                        <span class="info-value" id="infoLunarGanzhi"></span>
+                    </div>
+                    <div class="info-item"><span class="info-label">周数/天数</span><span class="info-value" id="infoWeekDay"></span></div>
+                    <div class="info-item"><span class="info-label">星座</span><span class="info-value" id="infoConstellation"></span></div>
+                    <div class="info-item"><span class="info-label">节日</span><span class="info-value" id="infoFestival"></span></div>
+                    <div id="weatherNow"></div>
+                    <div id="hourlyTable"></div>
+                    <div id="otherInfo"></div>
+                </div>
+                <!-- AI聊天容器 -->
+                <div class="ai-chat-container" id="aiChatContainer">
+                    <div class="mode-indicator" id="modeIndicator">普通问答</div>
+                    <div class="chat-history" id="chatHistory"></div>
+                    <div class="preset-buttons">
+                        <button class="preset-button" id="todayFortuneBtn">今日运势</button>
+                        <button class="preset-button" id="divinationBtn">小梅花占卜</button>
+                        <button class="preset-button normal" id="normalChatBtn">普通问答</button>
+                        <div class="sub-buttons" id="divinationSubButtons">
+                            <button class="sub-button" data-mode="time">时间</button>
+                            <button class="sub-button" data-mode="number">数字</button>
+                            <button class="sub-button" data-mode="object">物件</button>
+                        </div>
+                    </div>
+                    <div class="input-area">
+                        <input type="text" class="chat-input" id="chatInput" placeholder="输入你的问题...">
+                        <button class="send-button" id="sendBtn">发送</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        const LunarCalendar = require('lunar-calendar');
+        const SunCalc = require('suncalc'); // 用于月相计算
+
+        function hexToRgba(hex, alpha) {
+            const r = parseInt(hex.slice(1,3), 16);
+            const g = parseInt(hex.slice(3,5), 16);
+            const b = parseInt(hex.slice(5,7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
+        const today = new Date();
+        let currentYear = today.getFullYear();
+        let currentMonth = today.getMonth() + 1;
+
+        // DOM 元素
+        const yearDisplay = document.getElementById('yearDisplay');
+        const monthDisplay = document.getElementById('monthDisplay');
+        const yearInput = document.getElementById('yearInput');
+        const monthInput = document.getElementById('monthInput');
+        const yearBox = document.getElementById('yearBox');
+        const monthBox = document.getElementById('monthBox');
+        const yearPanel = document.getElementById('yearPanel');
+        const monthPanel = document.getElementById('monthPanel');
+        const yearGrid = document.getElementById('yearGrid');
+        const monthGrid = document.getElementById('monthGrid');
+        const prevBtn = document.getElementById('prevMonthBtn');
+        const nextBtn = document.getElementById('nextMonthBtn');
+        const todayBtn = document.getElementById('todayBtn');
+        const aiToggleBtn = document.getElementById('aiToggleBtn');
+        const infoContainer = document.getElementById('infoContainer');
+        const aiChatContainer = document.getElementById('aiChatContainer');
+        const modeIndicator = document.getElementById('modeIndicator');
+        const divinationSubButtons = document.getElementById('divinationSubButtons');
+
+        let monthPanelYear = currentYear;
+        const monthPanelYearSpan = document.getElementById('monthPanelYear');
+        const prevMonthYearBtn = document.getElementById('prevMonthYearBtn');
+        const nextMonthYearBtn = document.getElementById('nextMonthYearBtn');
+
+        const infoDateTitle = document.getElementById('infoDateTitle');
+        const infoLunarGanzhi = document.getElementById('infoLunarGanzhi');
+        const infoWeekDay = document.getElementById('infoWeekDay');
+        const infoConstellation = document.getElementById('infoConstellation');
+        const infoFestival = document.getElementById('infoFestival');
+        const weatherNow = document.getElementById('weatherNow');
+        const hourlyTable = document.getElementById('hourlyTable');
+        const otherInfo = document.getElementById('otherInfo');
+
+        const weatherCache = new Map();
+
+        // AI 相关
+        const chatHistory = document.getElementById('chatHistory');
+        const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const todayFortuneBtn = document.getElementById('todayFortuneBtn');
+        const divinationBtn = document.getElementById('divinationBtn');
+        const normalChatBtn = document.getElementById('normalChatBtn');
+
+        // 为每个模式独立保存消息历史
+        const modeMessages = {
+            fortune: [],
+            'divination-time': [],
+            'divination-number': [],
+            'divination-object': [],
+            normal: []
+        };
+
+        // 当前模式
+        let currentMode = 'normal';
+
+        // 系统提示词模板（已移除日期变量，因为会在本地信息中提供）
+        const systemPrompts = {
+            fortune: `请提供今日的详细运势，并严格按以下格式输出，确保结构清晰、易于阅读：
+【宜忌】
+宜：... 忌：...
+
+【事业】
+- 具体事项，有 xx 助力/小阻
+
+【财运】
+- 正财：稳/波动
+- 偏财：慎/可图
+- 宜：具体行动
+
+【人际】
+- 易合/有摩擦
+- 建议：具体建议
+
+【健康】
+- 注意：部位/问题
+- 宜：建议
+
+【月相】当前月相名称
+【物候】当前物候现象
+
+【神煞方位】
+- 喜神：[方位]
+- 福神：[方位]
+- 财神：[方位]
+- 阳贵神：[方位]
+- 阴贵神：[方位]
+
+【总结】
+今日整体 [吉凶/状态]，关键在 [要点]
+
+请用中文回答，语言简洁，各部分之间用空行分隔，使用项目符号或编号。`,
+            'divination-time': `请根据今日日期进行小梅花占卜的时间起卦，严格按以下流程回答，用清晰的结构呈现：
+
+【起卦过程】
+- 说明如何根据今天的年月日数字得出上卦、下卦、变卦。
+
+【本卦解读】
+- 卦名：
+- 核心含义：
+
+【体用生克】
+- 体卦与用卦的关系：
+- 吉凶判断：
+
+【运势建议】
+- 事业：
+- 财运：
+- 人际：
+- 健康：
+
+语言简洁现代，直接列出结果，各部分用空行分隔。`,
+            'divination-number': `请采用小梅花占卜的“字数/随机数起卦”方式回答用户的问题。根据用户提供的数字或文字（若用户未提供，请先提示用户输入几个字或一组随机数,不要根据用户提供的日期），按以下流程解读：
+
+【起卦过程】
+- 说明如何将字数（如笔画数）或随机数转换为上卦、下卦、变卦。
+
+【本卦解读】
+- 卦名：
+- 核心含义：
+
+【体用生克】
+- 体卦与用卦的关系：
+
+【运势建议】
+- 针对用户的问题给出具体建议。
+
+语言简洁现代，直接回答。`,
+            'divination-object': `请采用小梅花占卜的“声音/方位/物件起卦”方式回答用户的问题。根据用户描述的声音次数、方位或物件数量（若用户未提供，请先提示用户描述相关信息），按以下流程解读：
+
+【起卦过程】
+- 说明如何将声音次数、方位数或物件数量转换为数字，进而得到上卦、下卦、变卦。
+
+【本卦解读】
+- 卦名：
+- 核心含义：
+
+【体用生克】
+- 体卦与用卦的关系：
+
+【运势建议】
+- 针对用户的问题给出具体建议。
+
+语言简洁现代，直接回答。`,
+            normal: `你是一位贴心的生活助手，擅长用清晰易懂的方式解答问题。用户是30岁女性，有一岁半的女儿，在外贸公司做设计，最近刚结束两年居家办公返回公司上班，对卜卦等心理力量有一定兴趣。
+
+在回答时，请：
+- 保持语言简洁明了，逻辑清晰，知识点分明。
+- 如果问题涉及职场、育儿、设计或心理调适，可适当结合用户背景给出建议。
+- 若问题涉及卜卦或运势，请以开放和支持的态度提供信息，但不要过度渲染。
+- 避免使用过于专业的术语，除非用户询问。
+- 回答应温暖、鼓励，符合用户可能需要的情感支持。
+
+请使用分段、项目符号等结构化方式，让回复易于阅读。`
+        };
+
+        // 更新系统消息（始终在 messages 数组第一个位置）
+        function setSystemMessage(mode) {
+            const prompt = systemPrompts[mode]; // 不再替换日期变量，因为本地信息已包含
+            const systemMsg = { role: 'system', content: prompt };
+            const messages = modeMessages[mode];
+            const filtered = messages.filter(msg => msg.role !== 'system');
+            filtered.unshift(systemMsg);
+            modeMessages[mode] = filtered;
+        }
+
+        // 设置模式并更新UI
+        function setMode(mode, displayName) {
+            currentMode = mode;
+            modeIndicator.textContent = displayName;
+            setSystemMessage(mode);
+            renderChat();
+            divinationSubButtons.style.display = 'none';
+        }
+
+        // 当前面板模式: 'info' 或 'ai'
+        let panelMode = 'info';
+
+        function setPanelMode(mode) {
+            panelMode = mode;
+            if (mode === 'info') {
+                infoContainer.style.display = 'block';
+                aiChatContainer.style.display = 'none';
+            } else {
+                infoContainer.style.display = 'none';
+                aiChatContainer.style.display = 'flex';
+                if (modeMessages[currentMode].length === 0 || modeMessages[currentMode][0]?.role !== 'system') {
+                    setSystemMessage(currentMode);
+                }
+                renderChat();
+            }
+        }
+
+        // 渲染聊天记录
+        function renderChat() {
+            chatHistory.innerHTML = '';
+            const messages = modeMessages[currentMode];
+            messages.forEach(msg => {
+                if (msg.role === 'system') return;
+                if (!msg.id) {
+                    msg.id = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                }
+                const wrapper = document.createElement('div');
+                wrapper.className = `message-wrapper ${msg.role === 'user' ? 'user-message-wrapper' : 'assistant-message-wrapper'}`;
+
+                const msgDiv = document.createElement('div');
+                msgDiv.className = `message ${msg.role === 'user' ? 'user-message' : 'assistant-message'}`;
+                msgDiv.textContent = msg.content;
+
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'message-actions';
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'action-btn';
+                copyBtn.textContent = '📋';
+                copyBtn.title = '复制消息';
+                copyBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    navigator.clipboard.writeText(msg.content).then(() => {
+                        copyBtn.textContent = '✓';
+                        setTimeout(() => copyBtn.textContent = '📋', 1000);
+                    }).catch(err => console.error('复制失败:', err));
+                };
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'action-btn';
+                deleteBtn.textContent = '🗑️';
+                deleteBtn.title = '删除消息';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    const msgs = modeMessages[currentMode];
+                    const index = msgs.findIndex(m => m.id === msg.id);
+                    if (index !== -1) {
+                        msgs.splice(index, 1);
+                        renderChat();
+                    }
+                };
+
+                actionsDiv.appendChild(copyBtn);
+                actionsDiv.appendChild(deleteBtn);
+                msgDiv.appendChild(actionsDiv);
+                wrapper.appendChild(msgDiv);
+                chatHistory.appendChild(wrapper);
+            });
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        // 发送消息到AI
+        async function sendMessage(content) {
+            if (!content.trim()) return;
+            const messages = modeMessages[currentMode];
+            messages.push({ role: 'user', content, id: Date.now() + '-' + Math.random().toString(36).substr(2, 9) });
+            renderChat();
+            chatInput.value = '';
+
+            let messagesToSend = messages.slice();
+            const MAX_HISTORY = 30;
+            if (messagesToSend.length > MAX_HISTORY + 1) {
+                const system = messagesToSend[0];
+                const recent = messagesToSend.slice(-MAX_HISTORY);
+                messagesToSend = [system, ...recent];
+            }
+
+            try {
+                const reply = await ipcRenderer.invoke('ask-ai', messagesToSend);
+                messages.push({ role: 'assistant', content: reply, id: Date.now() + '-' + Math.random().toString(36).substr(2, 9) });
+            } catch (error) {
+                const errorMsg = error.message || '未知错误';
+                messages.push({ role: 'assistant', content: `发送失败: ${errorMsg}`, id: Date.now() + '-' + Math.random().toString(36).substr(2, 9) });
+                console.error('AI 错误:', error);
+            }
+            renderChat();
+        }
+
+        // ========== 本地数据获取函数 ==========
+        // 获取月相中文名称
+        function getMoonPhase(date) {
+            const illumination = SunCalc.getMoonIllumination(date);
+            const phase = illumination.phase; // 0-1
+            if (phase < 0.125) return '新月';
+            if (phase < 0.25) return '蛾眉月';
+            if (phase < 0.375) return '上弦月';
+            if (phase < 0.5) return '盈凸月';
+            if (phase < 0.625) return '满月';
+            if (phase < 0.75) return '亏凸月';
+            if (phase < 0.875) return '下弦月';
+            return '残月';
+        }
+
+        // 获取农历节日字符串（多个节日用顿号连接）
+        function getFestivalString(lunarInfo) {
+            const festivals = [];
+            if (lunarInfo.festival) festivals.push(lunarInfo.festival);
+            if (lunarInfo.solarFestival) festivals.push(lunarInfo.solarFestival);
+            return festivals.join('、') || '无';
+        }
+
+        // 获取当前日期的所有本地信息（用于附加到提示词）
+        function getLocalDateInfo() {
+            const date = new Date(currentYear, currentMonth-1, today.getDate());
+            const lunarInfo = LunarCalendar.solarToLunar(currentYear, currentMonth, today.getDate());
+            const lunarGanzhi = (lunarInfo.lunarMonthName || '') + (lunarInfo.lunarDayName || '') + ' ' + (lunarInfo.lunarYearName || '') + (lunarInfo.zodiac ? '(' + lunarInfo.zodiac + ')' : '');
+            const moonPhase = getMoonPhase(date);
+            const festivals = getFestivalString(lunarInfo);
+            // 星座计算（复用已有逻辑）
+            const monthDay = currentMonth * 100 + today.getDate();
+            let constellation = '';
+            if (monthDay >= 321 && monthDay <= 419) constellation = '白羊座';
+            else if (monthDay >= 420 && monthDay <= 520) constellation = '金牛座';
+            else if (monthDay >= 521 && monthDay <= 621) constellation = '双子座';
+            else if (monthDay >= 622 && monthDay <= 722) constellation = '巨蟹座';
+            else if (monthDay >= 723 && monthDay <= 822) constellation = '狮子座';
+            else if (monthDay >= 823 && monthDay <= 922) constellation = '处女座';
+            else if (monthDay >= 923 && monthDay <= 1023) constellation = '天秤座';
+            else if (monthDay >= 1024 && monthDay <= 1122) constellation = '天蝎座';
+            else if (monthDay >= 1123 && monthDay <= 1221) constellation = '射手座';
+            else if (monthDay >= 1222 || monthDay <= 119) constellation = '摩羯座';
+            else if (monthDay >= 120 && monthDay <= 218) constellation = '水瓶座';
+            else if (monthDay >= 219 && monthDay <= 320) constellation = '双鱼座';
+
+            // 构造信息字符串
+            return `【今日确切信息】
+公历：${currentYear}年${currentMonth}月${today.getDate()}日
+农历：${lunarGanzhi}
+月相：${moonPhase}
+星座：${constellation}
+节日：${festivals}`;
+        }
+
+        // 修改预设按钮，附加本地信息
+        todayFortuneBtn.addEventListener('click', () => {
+            setMode('fortune', '今日运势');
+            const localInfo = getLocalDateInfo();
+            const prompt = localInfo + '\n\n请提供今日运势，严格按格式输出。';
+            sendMessage(prompt);
+        });
+
+        divinationBtn.addEventListener('click', () => {
+            divinationSubButtons.style.display = 'flex';
+        });
+
+        document.querySelectorAll('.sub-button').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const mode = e.target.dataset.mode;
+                let displayName = '';
+                if (mode === 'time') displayName = '小梅花-时间';
+                else if (mode === 'number') displayName = '小梅花-数字';
+                else if (mode === 'object') displayName = '小梅花-物件';
+                setMode(`divination-${mode}`, displayName);
+                const localInfo = getLocalDateInfo();
+                const prompt = localInfo + '\n\n请为我占卜。';
+                sendMessage(prompt);
+            });
+        });
+
+        normalChatBtn.addEventListener('click', () => {
+            setMode('normal', '普通问答');
+            // 普通问答不需要附加本地信息，直接清空或让用户输入
+            // 也可以发送一个默认欢迎语
+        });
+
+        sendBtn.addEventListener('click', () => {
+            sendMessage(chatInput.value);
+        });
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage(chatInput.value);
+            }
+        });
+
+        aiToggleBtn.addEventListener('click', () => {
+            setPanelMode('ai');
+        });
+
+        // ---------- 原有功能 (保持不变) ----------
+        function updateHeader() {
+            yearDisplay.textContent = currentYear;
+            monthDisplay.textContent = currentMonth.toString().padStart(2, '0');
+            yearInput.value = currentYear;
+            monthInput.value = currentMonth;
+        }
+
+        // 原有节日获取函数已移至上方
+
+        function renderTodayWeatherFromCache(data) {
+            const [now, hourly, air, uv, sun] = data;
+            if (now) {
+                ipcRenderer.send('update-weather-for-main', { 
+                    temp: now.temp, 
+                    text: now.text,
+                    feelsLike: now.feelsLike
+                });
+            }
+
+            let html = '';
+            if (now) {
+                html += `<div class="current-weather">`;
+                html += `<div class="temp-big">🌡️ ${now.temp}°C</div>`;
+                html += `<div class="weather-text">${now.text} 体感 ${now.feelsLike}°C</div>`;
+                html += `</div>`;
+            }
+
+            if (hourly && hourly.length) {
+                html += `<div class="hourly-title">⏰ 逐小时预报</div>`;
+                html += `<table class="hourly-table"><tr><th>时间</th><th>天气</th><th>温度</th><th>降水</th><th>风速</th></tr>`;
+                const maxItems = 16;
+                for (let i = 0; i < Math.min(hourly.length, maxItems); i += 2) {
+                    const h = hourly[i];
+                    const hour = new Date(h.fxTime).getHours().toString().padStart(2,'0') + ':00';
+                    html += `<tr><td>${hour}</td><td>${h.text}</td><td>${h.temp}°C</td><td>${h.precip}mm</td><td>${h.windSpeed}km/h</td></tr>`;
+                }
+                html += `</table>`;
+            }
+
+            html += `<div class="detail-grid">`;
+            if (now) {
+                html += `<div>💧 湿度 ${now.humidity}%</div>`;
+                html += `<div>📊 气压 ${now.pressure}hPa</div>`;
+                html += `<div>🧭 风向 ${now.windDir}</div>`;
+                html += `<div>☔ 降水 ${now.precip}mm</div>`;
+                html += `<div>👁️ 能见度 ${now.vis}km</div>`;
+            }
+            if (air) html += `<div>🌫️ AQI ${air.aqi} (${air.category})</div>`;
+            if (uv) html += `<div>☀️ 紫外线 ${uv.level} (${uv.category})</div>`;
+            if (sun) {
+                html += `<div>🌅 日出 ${sun.sunrise}</div>`;
+                html += `<div>🌇 日落 ${sun.sunset}</div>`;
+            }
+            html += `</div>`;
+
+            weatherNow.innerHTML = html;
+            hourlyTable.innerHTML = '';
+            otherInfo.innerHTML = '';
+        }
+
+        async function renderTodayWeather(year, month, day) {
+            const key = `${year}-${month}-${day}`;
+            if (weatherCache.has(key)) {
+                renderTodayWeatherFromCache(weatherCache.get(key));
+                return;
+            }
+            const [now, hourly, air, uv, sun] = await Promise.all([
+                ipcRenderer.invoke('weather-now'),
+                ipcRenderer.invoke('weather-24h'),
+                ipcRenderer.invoke('air-now'),
+                ipcRenderer.invoke('indices-uv'),
+                ipcRenderer.invoke('sun-moon')
+            ]);
+            const data = [now, hourly, air, uv, sun];
+            weatherCache.set(key, data);
+            renderTodayWeatherFromCache(data);
+        }
+
+        function renderOtherDayWeatherFromCache(data) {
+            const d = data;
+            let html = `<div class="simple-weather">`;
+            html += `<div>🌡️ 白天 ${d.tempMax}°C / 夜间 ${d.tempMin}°C</div>`;
+            html += `<div>☀️ 白天 ${d.textDay} / 夜间 ${d.textNight}</div>`;
+            html += `<div>💧 湿度 ${d.humidity}%</div>`;
+            html += `</div>`;
+            weatherNow.innerHTML = html;
+            hourlyTable.innerHTML = '';
+            otherInfo.innerHTML = '';
+        }
+
+        async function renderOtherDayWeather(year, month, day) {
+            const key = `${year}-${month}-${day}`;
+            if (weatherCache.has(key)) {
+                renderOtherDayWeatherFromCache(weatherCache.get(key));
+                return;
+            }
+            const daily = await ipcRenderer.invoke('weather-7d');
+            if (!daily) return;
+            const target = `${year}-${month.toString().padStart(2,'0')}-${day.toString().padStart(2,'0')}`;
+            const d = daily.find(item => item.fxDate === target);
+            if (d) {
+                weatherCache.set(key, d);
+                renderOtherDayWeatherFromCache(d);
+            } else {
+                weatherNow.innerHTML = '<div>无天气数据</div>';
+            }
+        }
+
+        async function showDateInfo(year, month, day) {
+            setPanelMode('info');
+
+            document.querySelectorAll('.day-cell').forEach(c => c.classList.remove('selected'));
+            const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+            const dateObj = new Date(year, month-1, day);
+            const weekday = weekdays[dateObj.getDay()];
+            infoDateTitle.textContent = `${year}-${month.toString().padStart(2,'0')}-${day.toString().padStart(2,'0')} ${weekday}`;
+
+            const lunarInfo = LunarCalendar.solarToLunar(year, month, day);
+            const lunarGanzhi = (lunarInfo.lunarMonthName || '') + (lunarInfo.lunarDayName || '') + ' ' + (lunarInfo.lunarYearName || '') + (lunarInfo.zodiac ? '(' + lunarInfo.zodiac + ')' : '');
+            infoLunarGanzhi.textContent = lunarGanzhi;
+
+            function getWeekNumber(d) {
+                const firstDay = new Date(d.getFullYear(), 0, 1);
+                const pastDays = (d - firstDay) / 86400000;
+                return Math.ceil((pastDays + firstDay.getDay() + 1) / 7);
+            }
+            function getDayOfYear(d) {
+                const start = new Date(d.getFullYear(), 0, 0);
+                const diff = d - start;
+                const oneDay = 1000 * 60 * 60 * 24;
+                return Math.floor(diff / oneDay);
+            }
+            const weekNum = getWeekNumber(dateObj);
+            const dayNum = getDayOfYear(dateObj);
+            infoWeekDay.textContent = `第${weekNum}周 · 第${dayNum}天`;
+
+            const monthDay = month * 100 + day;
+            let constellation = '';
+            if (monthDay >= 321 && monthDay <= 419) constellation = '白羊座';
+            else if (monthDay >= 420 && monthDay <= 520) constellation = '金牛座';
+            else if (monthDay >= 521 && monthDay <= 621) constellation = '双子座';
+            else if (monthDay >= 622 && monthDay <= 722) constellation = '巨蟹座';
+            else if (monthDay >= 723 && monthDay <= 822) constellation = '狮子座';
+            else if (monthDay >= 823 && monthDay <= 922) constellation = '处女座';
+            else if (monthDay >= 923 && monthDay <= 1023) constellation = '天秤座';
+            else if (monthDay >= 1024 && monthDay <= 1122) constellation = '天蝎座';
+            else if (monthDay >= 1123 && monthDay <= 1221) constellation = '射手座';
+            else if (monthDay >= 1222 || monthDay <= 119) constellation = '摩羯座';
+            else if (monthDay >= 120 && monthDay <= 218) constellation = '水瓶座';
+            else if (monthDay >= 219 && monthDay <= 320) constellation = '双鱼座';
+            infoConstellation.textContent = constellation;
+
+            infoFestival.textContent = getFestivalString(lunarInfo);
+
+            const isToday = (year === today.getFullYear() && month === today.getMonth()+1 && day === today.getDate());
+            if (isToday) {
+                await renderTodayWeather(year, month, day);
+            } else {
+                await renderOtherDayWeather(year, month, day);
+            }
+        }
+
+        function createDayCell(year, month, day, isCurrentMonth) {
+            const cell = document.createElement('div');
+            cell.className = 'day-cell';
+            if (!isCurrentMonth) cell.classList.add('other-month');
+
+            const solarDiv = document.createElement('div');
+            solarDiv.className = 'solar';
+            solarDiv.textContent = day;
+            cell.appendChild(solarDiv);
+
+            const lunarInfo = LunarCalendar.solarToLunar(year, month, day);
+            let lunarText = lunarInfo.lunarDayName;
+            let isFestival = false;
+
+            let festivalText = null;
+            if (lunarInfo.festival) {
+                const parts = lunarInfo.festival.split(/[、,，\s]+/);
+                festivalText = parts[0];
+                if (isCurrentMonth) isFestival = true;
+            } else if (lunarInfo.solarFestival) {
+                const parts = lunarInfo.solarFestival.split(/[、,，\s]+/);
+                festivalText = parts[0];
+                if (isCurrentMonth) isFestival = true;
+            }
+            if (festivalText) lunarText = festivalText;
+
+            const lunarDiv = document.createElement('div');
+            lunarDiv.className = 'lunar' + (isFestival ? ' festival' : '');
+            lunarDiv.textContent = lunarText;
+            cell.appendChild(lunarDiv);
+
+            if (isCurrentMonth &&
+                year === today.getFullYear() &&
+                month === today.getMonth() + 1 &&
+                day === today.getDate()) {
+                cell.classList.add('today');
+            }
+
+            cell.addEventListener('click', (e) => {
+                document.querySelectorAll('.day-cell').forEach(c => c.classList.remove('selected'));
+                cell.classList.add('selected');
+                showDateInfo(year, month, day);
+            });
+            return cell;
+        }
+
+        function generateFullCalendar(year, month) {
+            const grid = document.getElementById('daysGrid');
+            grid.innerHTML = '';
+
+            const firstDay = new Date(year, month - 1, 1).getDay();
+            let leadingEmpty = firstDay === 0 ? 6 : firstDay - 1;
+            const daysInMonth = new Date(year, month, 0).getDate();
+
+            const prevMonthDate = new Date(year, month - 1, 0);
+            const prevMonthYear = prevMonthDate.getFullYear();
+            const prevMonth = prevMonthDate.getMonth() + 1;
+            const prevMonthDays = prevMonthDate.getDate();
+
+            for (let i = 0; i < leadingEmpty; i++) {
+                const day = prevMonthDays - leadingEmpty + i + 1;
+                grid.appendChild(createDayCell(prevMonthYear, prevMonth, day, false));
+            }
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                grid.appendChild(createDayCell(year, month, d, true));
+            }
+
+            const totalCells = Math.ceil((daysInMonth + leadingEmpty) / 7) * 7;
+            const trailingEmpty = totalCells - (leadingEmpty + daysInMonth);
+            const nextMonthDate = new Date(year, month, 1);
+            const nextMonthYear = nextMonthDate.getFullYear();
+            const nextMonth = nextMonthDate.getMonth() + 1;
+
+            for (let i = 0; i < trailingEmpty; i++) {
+                const day = i + 1;
+                grid.appendChild(createDayCell(nextMonthYear, nextMonth, day, false));
+            }
+        }
+
+        function renderCalendar() {
+            generateFullCalendar(currentYear, currentMonth);
+            updateHeader();
+            showDateInfo(today.getFullYear(), today.getMonth()+1, today.getDate());
+        }
+
+        function buildYearPanel(baseYear) {
+            yearGrid.innerHTML = '';
+            const startYear = baseYear - 6;
+            for (let i = 0; i < 12; i++) {
+                const y = startYear + i;
+                const item = document.createElement('div');
+                item.className = 'grid-item';
+                item.textContent = y;
+                item.addEventListener('click', () => {
+                    if (yearPanel.style.display === 'block' && monthPanel.style.display === 'none') {
+                        monthPanelYear = y;
+                        updateMonthPanelYear();
+                        hideAllPanels();
+                        monthPanel.style.display = 'block';
+                    } else {
+                        currentYear = y;
+                        renderCalendar();
+                        hideAllPanels();
+                    }
+                });
+                yearGrid.appendChild(item);
+            }
+        }
+
+        function buildMonthPanel() {
+            monthGrid.innerHTML = '';
+            for (let m = 1; m <= 12; m++) {
+                const item = document.createElement('div');
+                item.className = 'grid-item';
+                item.textContent = m.toString().padStart(2, '0');
+                item.addEventListener('click', () => {
+                    currentYear = monthPanelYear;
+                    currentMonth = m;
+                    renderCalendar();
+                    hideAllPanels();
+                });
+                monthGrid.appendChild(item);
+            }
+            monthPanelYearSpan.textContent = monthPanelYear;
+        }
+
+        function updateMonthPanelYear() {
+            monthPanelYearSpan.textContent = monthPanelYear;
+            buildMonthPanel();
+        }
+
+        function hideAllPanels() {
+            yearPanel.style.display = 'none';
+            monthPanel.style.display = 'none';
+        }
+
+        function showYearPanel() {
+            hideAllPanels();
+            buildYearPanel(currentYear);
+            yearPanel.style.display = 'block';
+        }
+
+        function showMonthPanel() {
+            hideAllPanels();
+            monthPanelYear = currentYear;
+            updateMonthPanelYear();
+            monthPanel.style.display = 'block';
+        }
+
+        yearBox.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showYearPanel();
+        });
+        monthBox.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showMonthPanel();
+        });
+        document.addEventListener('click', hideAllPanels);
+        yearPanel.addEventListener('click', (e) => e.stopPropagation());
+        monthPanel.addEventListener('click', (e) => e.stopPropagation());
+
+        prevMonthYearBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            monthPanelYear--;
+            updateMonthPanelYear();
+        });
+        nextMonthYearBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            monthPanelYear++;
+            updateMonthPanelYear();
+        });
+        monthPanelYearSpan.addEventListener('click', (e) => {
+            e.stopPropagation();
+            hideAllPanels();
+            buildYearPanel(monthPanelYear);
+            yearPanel.style.display = 'block';
+        });
+
+        yearInput.addEventListener('blur', () => {
+            const val = parseInt(yearInput.value, 10);
+            if (!isNaN(val) && val >= 1900 && val <= 2100) {
+                currentYear = val;
+                renderCalendar();
+            }
+            yearInput.style.display = 'none';
+            yearDisplay.style.display = 'block';
+        });
+        monthInput.addEventListener('blur', () => {
+            const val = parseInt(monthInput.value, 10);
+            if (!isNaN(val) && val >= 1 && val <= 12) {
+                currentMonth = val;
+                renderCalendar();
+            }
+            monthInput.style.display = 'none';
+            monthDisplay.style.display = 'block';
+        });
+        yearInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') yearInput.blur(); });
+        monthInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') monthInput.blur(); });
+        yearInput.style.display = 'none';
+        monthInput.style.display = 'none';
+
+        prevBtn.addEventListener('click', () => {
+            let newMonth = currentMonth - 1, newYear = currentYear;
+            if (newMonth < 1) { newMonth = 12; newYear--; }
+            currentYear = newYear; currentMonth = newMonth;
+            renderCalendar();
+        });
+        nextBtn.addEventListener('click', () => {
+            let newMonth = currentMonth + 1, newYear = currentYear;
+            if (newMonth > 12) { newMonth = 1; newYear++; }
+            currentYear = newYear; currentMonth = newMonth;
+            renderCalendar();
+        });
+        todayBtn.addEventListener('click', () => {
+            currentYear = today.getFullYear(); currentMonth = today.getMonth() + 1;
+            renderCalendar();
+        });
+
+        function openSettings() {
+            ipcRenderer.invoke('open-settings-window');
+        }
+
+        ipcRenderer.on('update-bg', (event, settings) => {
+            const { startColor, endColor, angle, alpha, textColor, fontSize } = settings;
+            document.documentElement.style.setProperty('--gradient-start', hexToRgba(startColor, alpha));
+            document.documentElement.style.setProperty('--gradient-end', hexToRgba(endColor, alpha));
+            document.documentElement.style.setProperty('--gradient-angle', angle + 'deg');
+            document.documentElement.style.setProperty('--text-color', textColor);
+            document.documentElement.style.setProperty('--font-size-base', fontSize + 'px');
+        });
+
+        (async () => {
+            try {
+                const settings = await ipcRenderer.invoke('load-settings');
+                if (settings?.calendar) {
+                    const calSettings = settings.calendar;
+                    document.documentElement.style.setProperty('--gradient-start', hexToRgba(calSettings.startColor, calSettings.alpha));
+                    document.documentElement.style.setProperty('--gradient-end', hexToRgba(calSettings.endColor, calSettings.alpha));
+                    document.documentElement.style.setProperty('--gradient-angle', calSettings.angle + 'deg');
+                    document.documentElement.style.setProperty('--text-color', calSettings.textColor);
+                    document.documentElement.style.setProperty('--font-size-base', calSettings.fontSize + 'px');
+                }
+            } catch (e) { console.error('加载设置失败', e); }
+        })();
+
+        // 初始化
+        renderCalendar();
+        setPanelMode('info');
+        setMode('normal', '普通问答');
+    </script>
+</body>
+</html>
