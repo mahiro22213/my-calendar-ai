@@ -1,28 +1,34 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  // 背景颜色存储（旧版）
   saveBgColor: (color) => ipcRenderer.invoke('save-bg-color', color),
   loadBgColor: () => ipcRenderer.invoke('load-bg-color'),
-
-  // 右键关闭菜单
   showContextMenu: () => ipcRenderer.invoke('show-context-menu'),
-
-  // 打开完整日历
   openFullCalendar: () => ipcRenderer.invoke('open-full-calendar'),
-
-  // 打开设置窗口
   openSettingsWindow: () => ipcRenderer.invoke('open-settings-window'),
-
-  // 监听背景更新事件
   onUpdateBg: (callback) => ipcRenderer.on('update-bg', (event, ...args) => callback(event, ...args)),
-
-  // 加载所有设置
   loadSettings: () => ipcRenderer.invoke('load-settings'),
-
-  // 监听主窗口天气更新
   onMainWeatherUpdate: (callback) => ipcRenderer.on('main-weather-update', (event, data) => callback(data)),
+  getAllTodos: () => ipcRenderer.invoke('get-all-todos'),
+  // 自定义信息编辑
+  saveCustomInfo: (dateStr, info) => ipcRenderer.invoke('save-custom-info', dateStr, info),
+  loadCustomInfo: () => ipcRenderer.invoke('load-custom-info'),
 
-  // AI 对话方法（新增）
-  askAI: (prompt) => ipcRenderer.invoke('ask-ai', prompt)
+  // 待办事项
+  saveIdeasForDate: (dateStr, ideas) => ipcRenderer.invoke('save-ideas-for-date', dateStr, ideas),
+  loadIdeasForDate: (dateStr) => ipcRenderer.invoke('load-ideas-for-date', dateStr),
+
+  // 全局灵感
+  saveGlobalIdeas: (ideas) => ipcRenderer.invoke('save-global-ideas', ideas),
+  loadGlobalIdeas: () => ipcRenderer.invoke('load-global-ideas'),
+
+  // 垃圾桶
+  saveTrashItems: (items) => ipcRenderer.invoke('save-trash-items', items),
+  loadTrashItems: () => ipcRenderer.invoke('load-trash-items'),
+
+  // AI 对话
+  askAI: (messages) => ipcRenderer.invoke('ask-ai', messages),
+
+  // 获取今日待办（用于主窗口）
+  getTodayTodos: () => ipcRenderer.invoke('get-today-todos')
 });

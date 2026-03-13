@@ -69,28 +69,51 @@
             -webkit-app-region: drag;
         }
 
-        .title-bar span {
+        .title-bar span, .title-bar .right-group {
             -webkit-app-region: no-drag;
         }
 
-        .weather-display {
+        .right-group {
             display: flex;
             align-items: center;
             gap: 12px;
-            -webkit-app-region: no-drag;
         }
 
-        #mainWeatherTemp {
-            font-size: 18px;
-            font-weight: 500;
-            color: var(--text-color);
-            opacity: 1;
+        .todo-badge {
+            background: #ff4444;
+            border-radius: 20px;
+            padding: 2px 8px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            display: none;
         }
 
-        #mainWeatherFeels {
+        .weather-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .weather-header span {
             font-size: 14px;
-            opacity: 0.7;
+            color: #fff;
+        }
+
+        .right-buttons {
+            display: flex;
+            gap: 4px;
+        }
+        .right-buttons button {
+            background: none;
+            border: none;
             color: var(--text-color);
+            font-size: 16px;
+            cursor: pointer;
+            padding: 0 4px;
+            border-radius: 4px;
+        }
+        .right-buttons button:hover {
+            background: rgba(255,255,255,0.2);
         }
 
         .card {
@@ -139,9 +162,15 @@
 
     <div class="title-bar" id="titleBar">
         <span id="yearMonth">2026年3月</span>
-        <div class="weather-display">
-            <span id="mainWeatherTemp"></span>
-            <span id="mainWeatherFeels"></span>
+        <div class="right-group">
+            <span class="todo-badge" id="todoBadge"></span>
+            <div class="weather-header">
+                <span id="mainWeatherTemp"></span>
+                <span id="mainWeatherFeels"></span>
+            </div>
+            <div class="right-buttons" style="display: none;">
+              <!-- 按钮已隐藏，但仍保留容器 -->
+            </div>
         </div>
     </div>
 
@@ -245,6 +274,34 @@
                     feelsSpan.textContent = `体感 ${data.feelsLike}°C`;
                 }
             });
+        }
+
+        // 获取今日待办并更新徽章
+        async function updateTodoBadge() {
+            if (!window.electronAPI || !window.electronAPI.getTodayTodos) return;
+            try {
+                const todos = await window.electronAPI.getTodayTodos();
+                const badge = document.getElementById('todoBadge');
+                if (todos.length > 0) {
+                    badge.textContent = `📋 ${todos.length}`;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+            } catch (e) {
+                console.error('获取今日待办失败', e);
+            }
+        }
+
+        // 初始化时更新，并每分钟刷新一次（接受延迟）
+        updateTodoBadge();
+        setInterval(updateTodoBadge, 60000);
+
+        // 打开设置窗口
+        function openSettings() {
+            if (window.electronAPI && window.electronAPI.openSettingsWindow) {
+                window.electronAPI.openSettingsWindow();
+            }
         }
     </script>
 </body>
